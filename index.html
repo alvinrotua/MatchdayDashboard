@@ -284,7 +284,7 @@ function downloadData(){
   const aoa=[header, ...RAW.map(d=>[d.titik,d.bulan,d.nobar,d.vidio,d.dls,d.umum])];
   const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Data Mentah');
-  XLSX.writeFile(wb,'Data_Racing_MagnetDLS_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  XLSX.writeFile(wb,'Data_Scoreboard_Matchday_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 function parseRows(rows){
   let hi=rows.findIndex(r=>r&&r.some(c=>typeof c==='string'&&/titik/i.test(c))); if(hi<0)hi=0;
