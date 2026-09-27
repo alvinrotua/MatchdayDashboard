@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Matchday Scoreboard — Magnet DLS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#F4F7FB; --bg2:#EAF0F7; --panel:#FFFFFF; --panel-2:#F7FAFD;
+  --line:#DDE6F0; --line-2:#C7D5E6;
+  --ink:#0F2138; --muted:#5A6E86; --faint:#8A9BB2;
+  --blue:#1D6FE0; --blue-dim:#155BB8;
+  --grass:#129E5E; --grass-soft:#E3F6EC;
+  --gold:#E7A400; --gold-soft:#FCF2D6;
+  --silver:#9AA9BD; --bronze:#C77F3B;
+  --red:#E23744;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:radial-gradient(1100px 460px at 50% -8%, #DCEBFF88, transparent),var(--bg);
+  color:var(--ink); font-family:'Inter',system-ui,sans-serif; font-size:14px; line-height:1.5; min-height:100%; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:1280px; margin:0 auto; padding:0 20px 80px;}
+header{padding:24px 0 18px; border-bottom:1px solid var(--line); margin-bottom:24px;}
+.htop{display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:16px;}
+.crest{width:58px; height:58px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(150deg,var(--blue),var(--blue-dim)); box-shadow:0 6px 18px #1D6FE033;}
+.crest svg{width:34px; height:34px; color:#fff;}
+h1.title{font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:40px; line-height:.9; letter-spacing:-.01em; text-transform:uppercase;}
+h1.title span{color:var(--blue);}
+.subtitle{color:var(--muted); font-size:13.5px; margin-top:5px; max-width:70ch;}
+.period{display:inline-flex;align-items:center;gap:6px;margin-top:7px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.03em;text-transform:uppercase;color:var(--grass);background:var(--grass-soft);padding:3px 12px;border-radius:20px;}
+.htools{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.rolebadge{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:.05em;text-transform:uppercase;padding:7px 14px;border-radius:9px;border:1px solid var(--line-2);color:var(--muted);background:var(--panel);}
+.rolebadge.admin{color:#fff;background:var(--blue);border-color:var(--blue);}
+.btn{border:1px solid var(--line-2); background:var(--panel); color:var(--ink); padding:11px 16px; border-radius:10px; font-weight:600; font-size:13.5px; display:inline-flex; align-items:center; gap:8px; transition:.15s; white-space:nowrap; cursor:pointer;}
+.btn:hover{border-color:var(--blue); background:var(--panel-2);}
+.btn svg{width:16px; height:16px;}
+.btn.primary{background:linear-gradient(150deg,var(--blue),var(--blue-dim)); color:#fff; border:none; font-weight:700;}
+.btn.primary:hover{filter:brightness(1.06);}
+.status{margin-top:13px; display:flex; gap:14px; align-items:center; font-size:12.5px; color:var(--muted); flex-wrap:wrap;}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--faint); flex-shrink:0;}
+.dot.live{background:var(--grass); box-shadow:0 0 0 3px #129E5E33;}
+.dot.err{background:var(--red);}
+.adminpanel{background:linear-gradient(180deg,#EAF2FE,var(--panel)); border:1px solid var(--line-2); border-radius:var(--radius); padding:18px 20px; margin-bottom:24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+.adminpanel .ic{width:42px;height:42px;border-radius:10px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.adminpanel .ic svg{width:22px;height:22px;color:#fff;}
+.adminpanel .txt{flex:1;min-width:200px;}
+.adminpanel .txt b{font-family:'Barlow Condensed',sans-serif;font-size:19px;text-transform:uppercase;letter-spacing:.01em;display:block;}
+.adminpanel .txt span{font-size:12.5px;color:var(--muted);}
+.empty{border:1.5px dashed var(--line-2); border-radius:var(--radius); padding:60px 30px; text-align:center; color:var(--muted); background:var(--panel);}
+.empty svg{width:52px; height:52px; opacity:.5; margin-bottom:14px; color:var(--blue);}
+.empty h3{font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:800; color:var(--ink); text-transform:uppercase; margin-bottom:6px;}
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px;}
+.kpi{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; position:relative; overflow:hidden; box-shadow:0 2px 8px #1d3a6608;}
+.kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--blue);}
+.kpi .lbl{font-size:11.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+.kpi .val{font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:34px; line-height:1.05; margin-top:6px;}
+.kpi .sub{font-size:12px; color:var(--faint); margin-top:2px;}
+.kpi.gold::before{background:var(--gold);} .kpi.gold .val{color:var(--gold);}
+.kpi.grass::before{background:var(--grass);} .kpi.grass .val{color:var(--grass);}
+.sec{margin-bottom:30px;}
+.sechead{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--line);}
+.sechead h2{font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:24px; text-transform:uppercase; letter-spacing:.01em;}
+.sechead .hint{font-size:12px; color:var(--muted);}
+.tabs{display:inline-flex; gap:4px; background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:4px;}
+.tab{border:none; background:transparent; color:var(--muted); font-weight:700; padding:8px 18px; border-radius:8px; text-transform:uppercase; font-family:'Barlow Condensed',sans-serif; letter-spacing:.02em; font-size:15px; cursor:pointer;}
+.tab.active{background:var(--blue); color:#fff;}
+.podium{display:grid; grid-template-columns:1fr 1.15fr 1fr; gap:14px; align-items:end; margin-bottom:22px;}
+.pod{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 16px; text-align:center; position:relative; box-shadow:0 2px 8px #1d3a6608;}
+.pod .rankbadge{position:absolute; top:-14px; left:50%; transform:translateX(-50%); width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:19px; color:#fff; border:3px solid var(--panel);}
+.pod.p1{border-color:var(--gold); background:linear-gradient(180deg,var(--gold-soft),var(--panel)); padding-top:28px;}
+.pod.p1 .rankbadge{background:var(--gold); box-shadow:0 0 16px #E7A40055;}
+.pod.p2 .rankbadge{background:var(--silver);}
+.pod.p3 .rankbadge{background:var(--bronze);}
+.pod .nm{font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; text-transform:uppercase; line-height:1; margin-top:6px;}
+.pod .sc{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:26px; margin-top:8px; color:var(--blue);}
+.pod.p1 .sc{color:var(--gold);}
+.pod .meta{font-size:11px; color:var(--muted); margin-top:6px;}
+.pod .trophy{width:26px;height:26px;margin:0 auto;color:var(--gold);}
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); box-shadow:0 2px 8px #1d3a6608;}
+table{width:100%; border-collapse:collapse; min-width:720px;}
+th{background:var(--panel-2); color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; text-align:left; padding:12px 14px; border-bottom:1px solid var(--line); white-space:nowrap;}
+th.num, td.num{text-align:right;}
+th.ctr, td.ctr{text-align:center;}
+td{padding:11px 14px; border-bottom:1px solid var(--line); font-size:13.5px;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--panel-2);}
+.rk{font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px; width:38px; color:var(--muted);}
+.rk.top{color:var(--gold);}
+.tnm{font-weight:600;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.bar{height:7px; border-radius:4px; background:var(--line); overflow:hidden; min-width:80px; display:inline-block; vertical-align:middle; width:100%;}
+.bar>i{display:block; height:100%; background:var(--blue); border-radius:4px;}
+.scorecell{font-family:'JetBrains Mono',monospace; font-weight:700;}
+.pill{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; font-family:'JetBrains Mono',monospace;}
+.pill.ok{background:var(--grass-soft); color:var(--grass);} .pill.mid{background:var(--gold-soft); color:var(--gold);} .pill.low{background:#FBE3E5; color:var(--red);}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+.chartbox{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; box-shadow:0 2px 8px #1d3a6608;}
+.chartbox h3{font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:18px; text-transform:uppercase; margin-bottom:14px;}
+.chartbox .cwrap{position:relative; height:280px;}
+footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--line); color:var(--faint); font-size:12px; text-align:center;}
+input[type=file]{display:none;}
+.modal{position:fixed;inset:0;background:#0F213899;display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal.show{display:flex;}
+.modalbox{background:var(--panel);border-radius:var(--radius);padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px #0f213844;}
+.modalbox h3{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;text-transform:uppercase;margin-bottom:6px;}
+.modalbox p{font-size:13px;color:var(--muted);margin-bottom:16px;}
+.modalbox input{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;font-size:15px;font-family:'Inter';margin-bottom:14px;}
+.modalbox input:focus{outline:none;border-color:var(--blue);}
+.modalbox .err{color:var(--red);font-size:12.5px;margin:-8px 0 12px;display:none;}
+@media(max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr);} .grid2{grid-template-columns:1fr;} .podium{grid-template-columns:1fr;} }
+@media(max-width:560px){ h1.title{font-size:32px;} .kpis{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="htop">
+      <div class="brand">
+        <div class="crest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v5M16 4v5M8 14h3M8 17h6"/></svg>
+        </div>
+        <div>
+          <h1 class="title">Matchday <span>Scoreboard</span></h1>
+          <p class="subtitle">Program racing antar 15 titik nobar (parameter Revenue 70% + Keaktifan Nobar 30%)</p>
+          <span class="period"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg> Periode Program: Oktober – Desember</span>
+        </div>
+      </div>
+      <div class="htools">
+        <span class="rolebadge" id="roleBadge">VIEW ONLY</span>
+        <button class="btn" id="downloadBtn" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Download Data
+        </button>
+        <label class="btn primary" for="fileInput" id="uploadBtn" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+          Update Data
+        </label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+      </div>
+    </div>
+    <div class="status">
+      <span><span class="dot" id="statusDot"></span><span id="statusText">Menghubungkan…</span></span>
+      <span id="lastUpdate"></span>
+    </div>
+  </header>
+  <div id="adminZone"></div>
+  <div id="app">
+    <div class="empty" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h3M8 17h6"/></svg>
+      <h3>Papan Skor Belum Terisi</h3>
+      <p id="emptyMsg">Menunggu data pertama.</p>
+    </div>
+  </div>
+  <footer>Matchday Scoreboard · Racing Magnet DLS · Target/titik Rp39,4 jt (cost ratio 20%)</footer>
+</div>
+
+<div class="modal" id="pwModal">
+  <div class="modalbox">
+    <h3>Masuk Mode Admin</h3>
+    <p>Masukkan password untuk mengaktifkan update data.</p>
+    <input type="password" id="pwInput" placeholder="Password admin" autocomplete="off">
+    <div class="err" id="pwErr">Password salah.</div>
+    <button class="btn primary" style="width:100%;justify-content:center" id="pwSubmit">Masuk</button>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ====== GANTI DENGAN CONFIG FIREBASE ANDA ======
+const firebaseConfig = {
+  apiKey: "AIzaSyDzWleM2Y4loBRXV6_1fr_TQ-o6kWZEzOo",
+  authDomain: "matchdayscoreboard.firebaseapp.com",
+  databaseURL: "https://matchdayscoreboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "matchdayscoreboard",
+  storageBucket: "matchdayscoreboard.firebasestorage.app",
+  messagingSenderId: "978654159836",
+  appId: "1:978654159836:web:9a8adc1aa0a40644d96519"
+};
+
+// ================================================
+
+// ====== PASSWORD ADMIN (ganti sesuai keinginan) ======
+const ADMIN_PASSWORD = "Harahap11";
+// =====================================================
+
+let fbDb=null;
+try{ const app=initializeApp(firebaseConfig); fbDb=getDatabase(app); }
+catch(e){ console.warn('Firebase init gagal',e); }
+window.__fb={ ref, set, onValue, db:fbDb };
+window.__ADMIN_PW = ADMIN_PASSWORD;   // password diekspos agar terbaca script utama
+</script>
+
+<script>
+const P={budget:118250000,costRatio:0.20,nTitik:15,wRev:0.70,wKerajinan:0.30,wVidio:0.40,wDLS:0.30,wUmum:0.30,targetNobar:4,months:["Oktober","November","Desember"]};
+P.targetRevTotal=P.budget/P.costRatio; P.targetRevTitik=P.targetRevTotal/P.nTitik;
+let RAW=[]; let charts={}; let currentMonth=null; let isAdmin=false; let lastTs=null;
+const fmt=n=>new Intl.NumberFormat('id-ID').format(Math.round(n));
+const fmtJt=n=>'Rp'+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+' jt';
+const pct=n=>(n*100).toLocaleString('id-ID',{maximumFractionDigits:1})+'%';
+const qs=new URLSearchParams(location.search);
+
+function boot(){
+  const wantAdmin = qs.get('admin')==='1';
+  // tombol download selalu tersedia di link utama
+  document.getElementById('downloadBtn').style.display='inline-flex';
+  document.getElementById('downloadBtn').onclick=downloadData;
+  if(wantAdmin){ showPwModal(); }
+  connectFirebase();
+}
+function showPwModal(){
+  const m=document.getElementById('pwModal'); m.classList.add('show');
+  const inp=document.getElementById('pwInput'); inp.focus();
+  const submit=()=>{
+    const val=inp.value;
+    if(val && val===window.__ADMIN_PW){ m.classList.remove('show'); enableAdmin(); }
+    else{ document.getElementById('pwErr').style.display='block'; }
+  };
+  document.getElementById('pwSubmit').onclick=submit;
+  inp.onkeydown=e=>{ if(e.key==='Enter') submit(); };
+}
+function enableAdmin(){
+  isAdmin=true;
+  const rb=document.getElementById('roleBadge'); rb.textContent='ADMIN'; rb.classList.add('admin');
+  document.getElementById('uploadBtn').style.display='inline-flex';
+  const z=document.getElementById('adminZone');
+  z.innerHTML='<div class="adminpanel"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="txt"><b>Mode Admin</b><span>Upload file Excel data mentah — hasilnya langsung tersimpan ke server & tampil di link yang dibagikan ke tim teritori.</span></div></div>';
+}
+function connectFirebase(){
+  const fb=window.__fb;
+  if(!fb || !fb.db){
+    setStatus('err','Firebase belum terhubung — cek konfigurasi.'); showEmpty(); return;
+  }
+  try{
+    fb.onValue(fb.ref(fb.db,'scoreboard/current'), snap=>{
+      const d=snap.val();
+      if(d && d.rows){ RAW=d.rows; lastTs=d.updatedAt; setStatus('live'); render(); }
+      else { RAW=[]; setStatus('empty'); showEmpty(); }
+    }, err=>{ setStatus('err','Gagal membaca data: '+err.message); showEmpty(); });
+  }catch(e){ setStatus('err','Error koneksi.'); showEmpty(); }
+}
+function setStatus(kind,msg){
+  const dot=document.getElementById('statusDot'), txt=document.getElementById('statusText');
+  dot.className='dot'+(kind==='live'?' live':kind==='err'?' err':'');
+  if(kind==='live') txt.textContent=RAW.length+' baris data · tersinkron untuk semua teritori';
+  else if(kind==='empty') txt.textContent=isAdmin?'Belum ada data — silakan Update Data':'Belum ada data dari admin';
+  else txt.textContent=msg||'…';
+  document.getElementById('lastUpdate').textContent=lastTs?('· diperbarui '+new Date(lastTs).toLocaleString('id-ID')):'';
+}
+function showEmpty(){
+  document.getElementById('app').innerHTML='';
+  const e=document.createElement('div'); e.className='empty';
+  e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h3M8 17h6"/></svg><h3>Papan Skor Belum Terisi</h3><p>'+(isAdmin?'Klik <b>Update Data</b> dan pilih file Template_Data_Racing.xlsx.':'Menunggu admin mengunggah data. Halaman akan otomatis terisi begitu data masuk.')+'</p>';
+  document.getElementById('app').appendChild(e);
+}
+document.getElementById('fileInput').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const buf=await f.arrayBuffer(); const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames.find(n=>/data/i.test(n))||wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1}); const parsed=parseRows(rows);
+    if(!parsed.length){ alert('Tidak ada baris data terbaca. Pastikan memakai Template_Data_Racing.xlsx.'); return; }
+    const fb=window.__fb;
+    if(fb && fb.db){
+      try{ await fb.set(fb.ref(fb.db,'scoreboard/current'),{rows:parsed,updatedAt:Date.now()}); }
+      catch(err){ alert('Gagal simpan ke Firebase: '+err.message+'\nPeriksa Security Rules / password.'); }
+    } else { RAW=parsed; lastTs=Date.now(); setStatus('live'); render(); }
+  }catch(err){ alert('Gagal membaca file: '+err.message); }
+  e.target.value='';
+});
+function downloadData(){
+  if(!RAW.length){ alert('Belum ada data untuk diunduh.'); return; }
+  const header=['Titik / Branch','Bulan','Jumlah Nobar','Revenue Vidio (Rp)','Revenue DLS Lain (Rp)','Revenue Telkomsel Lain (Rp)'];
+  const aoa=[header, ...RAW.map(d=>[d.titik,d.bulan,d.nobar,d.vidio,d.dls,d.umum])];
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Data Mentah');
+  XLSX.writeFile(wb,'Data_Racing_MagnetDLS_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function parseRows(rows){
+  let hi=rows.findIndex(r=>r&&r.some(c=>typeof c==='string'&&/titik/i.test(c))); if(hi<0)hi=0;
+  const out=[];
+  for(let i=hi+1;i<rows.length;i++){ const r=rows[i]; if(!r||!r[0])continue;
+    const titik=(''+r[0]).trim(); const bulan=(''+(r[1]||'')).trim(); if(!titik||!bulan)continue;
+    const nobar=+r[2]||0,vidio=+r[3]||0,dls=+r[4]||0,umum=+r[5]||0;
+    if(nobar===0&&vidio===0&&dls===0&&umum===0)continue;
+    out.push({titik,bulan,nobar,vidio,dls,umum}); }
+  return out;
+}
+function aggregate(scope){
+  const map={};
+  RAW.filter(d=>scope==='ALL'||d.bulan===scope).forEach(d=>{ if(!map[d.titik])map[d.titik]={titik:d.titik,nobar:0,vidio:0,dls:0,umum:0};
+    const m=map[d.titik]; m.nobar+=d.nobar;m.vidio+=d.vidio;m.dls+=d.dls;m.umum+=d.umum; });
+  const arr=Object.values(map).map(m=>{
+    const nMonths=scope==='ALL'?Math.max(1,new Set(RAW.filter(x=>x.titik===m.titik).map(x=>x.bulan)).size):1;
+    const revT=m.vidio*P.wVidio+m.dls*P.wDLS+m.umum*P.wUmum; const targetRev=P.targetRevTitik*nMonths;
+    const pRev=revT/targetRev; const pKer=Math.min(m.nobar/(P.targetNobar*nMonths),1);
+    const skor=pRev*P.wRev+pKer*P.wKerajinan;
+    return {...m,revT,pRev,pKer,skor,revKotor:m.vidio+m.dls+m.umum}; });
+  arr.sort((a,b)=>b.skor-a.skor); arr.forEach((x,i)=>x.rank=i+1); return arr;
+}
+function render(){
+  const monthsInData=P.months.filter(m=>RAW.some(d=>d.bulan===m));
+  if(!monthsInData.length){ showEmpty(); return; }
+  if(!currentMonth||!monthsInData.includes(currentMonth)) currentMonth=monthsInData[monthsInData.length-1];
+  const q=aggregate('ALL'); const totalRevKotor=RAW.reduce((s,d)=>s+d.vidio+d.dls+d.umum,0);
+  const totalNobar=RAW.reduce((s,d)=>s+d.nobar,0); const actualCR=totalRevKotor>0?P.budget/totalRevKotor:0; const leader=q[0];
+  let html='';
+  html+=`<div class="kpis">
+    <div class="kpi grass"><div class="lbl">Total Revenue</div><div class="val">${fmtJt(totalRevKotor)}</div><div class="sub">${pct(totalRevKotor/P.targetRevTotal)} dari target</div></div>
+    <div class="kpi"><div class="lbl">Target Kuartal</div><div class="val">${fmtJt(P.targetRevTotal)}</div><div class="sub">cost ratio ${pct(P.costRatio)}</div></div>
+    <div class="kpi gold"><div class="lbl">Pemuncak Klasemen</div><div class="val" style="font-size:26px">${leader?leader.titik:'-'}</div><div class="sub">${leader?'skor '+pct(leader.skor):''}</div></div>
+    <div class="kpi"><div class="lbl">Cost Ratio Aktual</div><div class="val">${pct(actualCR)}</div><div class="sub">${totalNobar} nobar terselenggara</div></div></div>`;
+  html+=`<div class="sec"><div class="sechead"><h2>Ranking Bulanan</h2><div class="tabs" id="monthTabs">${P.months.map(m=>`<button class="tab ${m===currentMonth?'active':''}" data-m="${m}" ${monthsInData.includes(m)?'':'style="opacity:.4"'}>${m.slice(0,3)}</button>`).join('')}</div></div><div id="monthContent"></div></div>`;
+  html+=`<div class="sec"><div class="sechead"><h2>Ranking Kuartal <span style="color:var(--muted);font-size:14px">(Okt–Des)</span></h2><span class="hint">akumulasi seluruh bulan</span></div>`+podiumHTML(q)+tableHTML(q)+`</div>`;
+  html+=`<div class="sec"><div class="sechead"><h2>Grafik Tren</h2><span class="hint">perkembangan antar bulan</span></div><div class="grid2"><div class="chartbox"><h3>Tren Revenue Tertimbang</h3><div class="cwrap"><canvas id="chartTrend"></canvas></div></div><div class="chartbox"><h3>Skor Kuartal — Top 8</h3><div class="cwrap"><canvas id="chartScore"></canvas></div></div></div></div>`;
+  document.getElementById('app').innerHTML=html;
+  renderMonth(currentMonth);
+  document.querySelectorAll('#monthTabs .tab').forEach(b=>{ b.onclick=()=>{ currentMonth=b.dataset.m; document.querySelectorAll('#monthTabs .tab').forEach(x=>x.classList.toggle('active',x===b)); renderMonth(currentMonth); }; });
+  drawCharts(monthsInData,q);
+}
+function renderMonth(m){ const arr=aggregate(m); const el=document.getElementById('monthContent');
+  if(!arr.length){ el.innerHTML=`<div class="empty" style="padding:36px"><p>Belum ada data bulan ${m}.</p></div>`; return; } el.innerHTML=podiumHTML(arr)+tableHTML(arr); }
+function podiumHTML(arr){ const top=arr.slice(0,3); const order=[top[1],top[0],top[2]]; const cls=['p2','p1','p3']; const rk=[2,1,3];
+  return `<div class="podium">${order.map((t,i)=>t?`<div class="pod ${cls[i]}"><div class="rankbadge">${rk[i]}</div>${rk[i]===1?'<svg class="trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>':''}<div class="nm">${t.titik}</div><div class="sc">${pct(t.skor)}</div><div class="meta">${t.nobar} nobar · ${fmtJt(t.revKotor)}</div></div>`:`<div class="pod"><div class="meta">—</div></div>`).join('')}</div>`; }
+function scorePill(p){ const c=p>=0.9?'ok':p>=0.6?'mid':'low'; return `<span class="pill ${c}">${pct(p)}</span>`; }
+function tableHTML(arr){ const maxScore=Math.max(...arr.map(a=>a.skor),0.001);
+  return `<div class="tablewrap"><table><thead><tr><th class="ctr">#</th><th>Titik / Branch</th><th class="ctr">Nobar</th><th class="num">Rev Vidio</th><th class="num">Rev DLS</th><th class="num">Rev Umum</th><th class="num">Rev Tertimbang</th><th class="ctr">%Rev</th><th class="ctr">%Rajin</th><th class="num" style="min-width:130px">Skor</th></tr></thead><tbody>${arr.map(t=>`<tr><td class="ctr"><span class="rk ${t.rank<=3?'top':''}">${t.rank}</span></td><td class="tnm">${t.titik}</td><td class="ctr mono">${t.nobar}</td><td class="num mono">${fmt(t.vidio)}</td><td class="num mono">${fmt(t.dls)}</td><td class="num mono">${fmt(t.umum)}</td><td class="num mono">${fmt(t.revT)}</td><td class="ctr">${scorePill(t.pRev)}</td><td class="ctr">${scorePill(t.pKer)}</td><td class="num"><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="bar"><i style="width:${Math.min(100,t.skor/maxScore*100)}%"></i></span><span class="scorecell" style="min-width:52px">${pct(t.skor)}</span></div></td></tr>`).join('')}</tbody></table></div>`; }
+function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawCharts(monthsInData,q){
+  if(typeof Chart==='undefined'){ document.querySelectorAll('.chartbox').forEach(b=>{ b.querySelector('.cwrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--faint);font-size:13px;text-align:center;padding:20px">Grafik butuh koneksi internet (Chart.js).</div>'; }); return; }
+  Object.values(charts).forEach(c=>c&&c.destroy());
+  const blue=cssv('--blue'),grass=cssv('--grass'),gold=cssv('--gold'),muted=cssv('--muted'),line=cssv('--line');
+  Chart.defaults.color=muted; Chart.defaults.font.family='Inter';
+  const totalPerMonth=monthsInData.map(m=>aggregate(m).reduce((s,x)=>s+x.revT,0));
+  const top3=q.slice(0,3).map(t=>t.titik);
+  const seriesTop=top3.map((tn,idx)=>({label:tn,data:monthsInData.map(m=>{const a=aggregate(m).find(x=>x.titik===tn);return a?a.revT:0;}),borderColor:[gold,blue,grass][idx],backgroundColor:'transparent',borderWidth:2.5,tension:.3,pointRadius:4,pointBackgroundColor:[gold,blue,grass][idx]}));
+  const ctxT=document.getElementById('chartTrend');
+  if(ctxT) charts.trend=new Chart(ctxT,{type:'line',data:{labels:monthsInData,datasets:[{label:'Total (semua titik)',data:totalPerMonth,borderColor:muted,borderDash:[5,4],borderWidth:1.5,backgroundColor:'transparent',tension:.3,pointRadius:3},...seriesTop]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:12,boxHeight:12,font:{size:11}}}},scales:{y:{grid:{color:line},ticks:{callback:v=>'Rp'+(v/1e6).toFixed(0)+'jt'}},x:{grid:{color:line}}}}});
+  const top8=q.slice(0,8); const ctxS=document.getElementById('chartScore');
+  if(ctxS) charts.score=new Chart(ctxS,{type:'bar',data:{labels:top8.map(t=>t.titik),datasets:[{label:'Skor',data:top8.map(t=>+(t.skor*100).toFixed(1)),backgroundColor:top8.map((t,i)=>i===0?gold:blue),borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Skor '+c.parsed.x+'%'}}},scales:{x:{grid:{color:line},ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+}
+// tunggu firebase module siap sedikit
+setTimeout(boot, 400);
+</script>
+</body>
+</html>
