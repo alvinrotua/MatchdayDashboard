@@ -202,8 +202,8 @@ window.__ADMIN_PW = ADMIN_PASSWORD;   // password diekspos agar terbaca script u
 </script>
 
 <script>
-const P={budget:118250000,costRatio:0.20,nTitik:15,wRev:0.70,wKerajinan:0.30,wVidio:0.40,wDLS:0.30,wUmum:0.30,targetNobar:4,months:["Oktober","November","Desember"]};
-P.targetRevTotal=P.budget/P.costRatio; P.targetRevTitik=P.targetRevTotal/P.nTitik;
+const P={budget:118250000,costRatio:0.20,nTitik:15,wRev:0.70,wKerajinan:0.30,wVidio:0.40,wDLS:0.30,wUmum:0.30,targetNobar:4,targetRevTitik:40000000,months:["Oktober","November","Desember"]};
+P.targetRevTotal=P.targetRevTitik*P.nTitik;
 let RAW=[]; let charts={}; let currentMonth=null; let isAdmin=false; let lastTs=null;
 const fmt=n=>new Intl.NumberFormat('id-ID').format(Math.round(n));
 const fmtJt=n=>'Rp'+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+' jt';
@@ -306,7 +306,7 @@ function aggregate(scope){
     const pRev=revT/targetRev; const pKer=Math.min(m.nobar/(P.targetNobar*nMonths),1);
     const skor=pRev*P.wRev+pKer*P.wKerajinan;
     return {...m,revT,pRev,pKer,skor,revKotor:m.vidio+m.dls+m.umum}; });
-  arr.sort((a,b)=>b.skor-a.skor); arr.forEach((x,i)=>x.rank=i+1); return arr;
+  arr.sort((a,b)=>{ const sa=Math.round(a.skor*1000)/10, sb=Math.round(b.skor*1000)/10; if(sb!==sa) return sb-sa; if(b.vidio!==a.vidio) return b.vidio-a.vidio; if(b.dls!==a.dls) return b.dls-a.dls; return b.revKotor-a.revKotor; }); arr.forEach((x,i)=>x.rank=i+1); return arr;
 }
 function render(){
   const monthsInData=P.months.filter(m=>RAW.some(d=>d.bulan===m));
@@ -317,12 +317,12 @@ function render(){
   let html='';
   html+=`<div class="kpis">
     <div class="kpi grass"><div class="lbl">Total Revenue</div><div class="val">${fmtJt(totalRevKotor)}</div><div class="sub">${pct(totalRevKotor/P.targetRevTotal)} dari target</div></div>
-    <div class="kpi"><div class="lbl">Target Kuartal</div><div class="val">${fmtJt(P.targetRevTotal)}</div><div class="sub">cost ratio ${pct(P.costRatio)}</div></div>
+    <div class="kpi"><div class="lbl">Target Kuartal</div><div class="val">${fmtJt(P.targetRevTotal)}</div><div class="sub">Rp40 jt × 15 titik</div></div>
     <div class="kpi gold"><div class="lbl">Pemuncak Klasemen</div><div class="val" style="font-size:26px">${leader?leader.titik:'-'}</div><div class="sub">${leader?'skor '+pct(leader.skor):''}</div></div>
     <div class="kpi"><div class="lbl">Cost Ratio Aktual</div><div class="val">${pct(actualCR)}</div><div class="sub">${totalNobar} nobar terselenggara</div></div></div>`;
   html+=`<div class="sec"><div class="sechead"><h2>Ranking Bulanan</h2><div class="tabs" id="monthTabs">${P.months.map(m=>`<button class="tab ${m===currentMonth?'active':''}" data-m="${m}" ${monthsInData.includes(m)?'':'style="opacity:.4"'}>${m.slice(0,3)}</button>`).join('')}</div></div><div id="monthContent"></div></div>`;
   html+=`<div class="sec"><div class="sechead"><h2>Ranking Kuartal <span style="color:var(--muted);font-size:14px">(Okt–Des)</span></h2><span class="hint">akumulasi seluruh bulan</span></div>`+podiumHTML(q)+tableHTML(q)+`</div>`;
-  html+=`<div class="sec"><div class="sechead"><h2>Grafik Tren</h2><span class="hint">perkembangan antar bulan</span></div><div class="grid2"><div class="chartbox"><h3>Tren Revenue Tertimbang</h3><div class="cwrap"><canvas id="chartTrend"></canvas></div></div><div class="chartbox"><h3>Skor Kuartal — Top 8</h3><div class="cwrap"><canvas id="chartScore"></canvas></div></div></div></div>`;
+  html+=`<div class="sec"><div class="sechead"><h2>Grafik Tren</h2><span class="hint">perkembangan antar bulan</span></div><div class="grid2"><div class="chartbox"><h3>Tren Revenue Proporsional</h3><div class="cwrap"><canvas id="chartTrend"></canvas></div></div><div class="chartbox"><h3>Skor Kuartal — Top 8</h3><div class="cwrap"><canvas id="chartScore"></canvas></div></div></div></div>`;
   document.getElementById('app').innerHTML=html;
   renderMonth(currentMonth);
   document.querySelectorAll('#monthTabs .tab').forEach(b=>{ b.onclick=()=>{ currentMonth=b.dataset.m; document.querySelectorAll('#monthTabs .tab').forEach(x=>x.classList.toggle('active',x===b)); renderMonth(currentMonth); }; });
@@ -334,7 +334,7 @@ function podiumHTML(arr){ const top=arr.slice(0,3); const order=[top[1],top[0],t
   return `<div class="podium">${order.map((t,i)=>t?`<div class="pod ${cls[i]}"><div class="rankbadge">${rk[i]}</div>${rk[i]===1?'<svg class="trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>':''}<div class="nm">${t.titik}</div><div class="sc">${pct(t.skor)}</div><div class="meta">${t.nobar} nobar · ${fmtJt(t.revKotor)}</div></div>`:`<div class="pod"><div class="meta">—</div></div>`).join('')}</div>`; }
 function scorePill(p){ const c=p>=0.9?'ok':p>=0.6?'mid':'low'; return `<span class="pill ${c}">${pct(p)}</span>`; }
 function tableHTML(arr){ const maxScore=Math.max(...arr.map(a=>a.skor),0.001);
-  return `<div class="tablewrap"><table><thead><tr><th class="ctr">#</th><th>Titik / Branch</th><th class="ctr">Nobar</th><th class="num">Rev Vidio</th><th class="num">Rev DLS</th><th class="num">Rev Umum</th><th class="num">Rev Tertimbang</th><th class="ctr">%Rev</th><th class="ctr">%Rajin</th><th class="num" style="min-width:130px">Skor</th></tr></thead><tbody>${arr.map(t=>`<tr><td class="ctr"><span class="rk ${t.rank<=3?'top':''}">${t.rank}</span></td><td class="tnm">${t.titik}</td><td class="ctr mono">${t.nobar}</td><td class="num mono">${fmt(t.vidio)}</td><td class="num mono">${fmt(t.dls)}</td><td class="num mono">${fmt(t.umum)}</td><td class="num mono">${fmt(t.revT)}</td><td class="ctr">${scorePill(t.pRev)}</td><td class="ctr">${scorePill(t.pKer)}</td><td class="num"><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="bar"><i style="width:${Math.min(100,t.skor/maxScore*100)}%"></i></span><span class="scorecell" style="min-width:52px">${pct(t.skor)}</span></div></td></tr>`).join('')}</tbody></table></div>`; }
+  return `<div class="tablewrap"><table><thead><tr><th class="ctr">#</th><th>Titik / Branch</th><th class="ctr">Nobar</th><th class="num">Rev Vidio</th><th class="num">Rev DLS</th><th class="num">Rev Umum</th><th class="num">Rev Proporsional</th><th class="ctr">%Rev</th><th class="ctr">%Rajin</th><th class="num" style="min-width:130px">Skor</th></tr></thead><tbody>${arr.map(t=>`<tr><td class="ctr"><span class="rk ${t.rank<=3?'top':''}">${t.rank}</span></td><td class="tnm">${t.titik}</td><td class="ctr mono">${t.nobar}</td><td class="num mono">${fmt(t.vidio)}</td><td class="num mono">${fmt(t.dls)}</td><td class="num mono">${fmt(t.umum)}</td><td class="num mono">${fmt(t.revT)}</td><td class="ctr">${scorePill(t.pRev)}</td><td class="ctr">${scorePill(t.pKer)}</td><td class="num"><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="bar"><i style="width:${Math.min(100,t.skor/maxScore*100)}%"></i></span><span class="scorecell" style="min-width:52px">${pct(t.skor)}</span></div></td></tr>`).join('')}</tbody></table></div>`; }
 function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function drawCharts(monthsInData,q){
   if(typeof Chart==='undefined'){ document.querySelectorAll('.chartbox').forEach(b=>{ b.querySelector('.cwrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--faint);font-size:13px;text-align:center;padding:20px">Grafik butuh koneksi internet (Chart.js).</div>'; }); return; }
